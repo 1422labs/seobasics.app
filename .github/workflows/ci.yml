@@ -1,0 +1,92 @@
+# Every job runs on the 1422 Labs ARC runners (`runs-on: arc-1422labs`);
+# scripts/check-workflow-runners.sh enforces it. Nothing here deploys, and
+# nothing needs Stripe or other credentials.
+#
+# A new job must be added to `mandatory-checks.needs`; the gate also requires
+# the exact job count.
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  # Prisma's config needs a URL even where nothing connects; the Database job
+  # sets its own.
+  DATABASE_URL: postgresql://ci:ci@localhost:5432/unused
+  NEXT_TELEMETRY_DISABLED: "1"
+  # Node-local pnpm store on the runner host (shared, checked on use).
+  pnpm_config_store_dir: /data/arc-runner-cache/pnpm-store
+
+jobs:
+  runner-policy:
+    name: Runner policy
+    runs-on: arc-1422labs
+    steps:
+      - uses: actions/checkout@v5
+      - run: sh scripts/check-workflow-runners.sh
+
+  checks:
+    name: Lint, typecheck and unit tests
+    runs-on: arc-1422labs
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  build:
+    name: Build
+    runs-on: arc-1422labs
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - run: pnpm build
+
+  database:
+    name: Database migrations
+    runs-on: arc-1422labs
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: seobasics_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --tmpfs /var/lib/postgresql/data
+          --health-cmd "pg_isready -U ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/seobasics_ci
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - run: pnpm exec prisma validate
+      - name: Migrations apply to an empty database and match the schema
+        run: pnpm check:migrations
+
+  mandatory-checks:
+    name: Mandatory checks
+    if: always()
+    needs: [runner-policy, checks, build, database]
+    runs-on: arc-1422labs
+    steps:
+      - name: Require every check to succeed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          jq -r 'to_entries[] | "\(.key): \(.value.result)"' <<< "${NEEDS}"
+          jq -e 'length == 4 and all(.[]; .result == "success")' <<< "${NEEDS}" > /dev/null

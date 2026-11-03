@@ -1,0 +1,14 @@
+name: seobasics
+
+services:
+  seobasics_db:
+    image: postgres:16
+    container_name: seobasics_dev_db
+    environment:
+      POSTGRES_DB: seobasics_dev
+      POSTGRES_USER: seobasics
+      POSTGRES_PASSWORD: seobasics
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    ports:
+      - "5347:5432"
