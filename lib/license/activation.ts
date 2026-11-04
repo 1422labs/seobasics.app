@@ -9,6 +9,11 @@ export type LicensePolicy = {
   maxActiveDevices: number;
   /** How long a signed activation token works offline. */
   tokenLifetimeSeconds: number;
+  /**
+   * When the app should refresh quietly while online (`refresh_after`).
+   * Optional and shorter than the token lifetime.
+   */
+  refreshAfterSeconds?: number;
 };
 
 export type LicenseState = { status: "active" | "revoked" };
@@ -40,6 +45,10 @@ export function assertValidPolicy(policy: LicensePolicy) {
   }
   if (!Number.isSafeInteger(policy.tokenLifetimeSeconds) || policy.tokenLifetimeSeconds < 60) {
     throw new Error("tokenLifetimeSeconds must be an integer of at least 60");
+  }
+  const refresh = policy.refreshAfterSeconds;
+  if (refresh !== undefined && (!Number.isSafeInteger(refresh) || refresh < 60 || refresh >= policy.tokenLifetimeSeconds)) {
+    throw new Error("refreshAfterSeconds must be an integer of at least 60 and shorter than tokenLifetimeSeconds");
   }
 }
 

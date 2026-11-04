@@ -76,7 +76,16 @@ function isClaims(value: unknown): value is ActivationClaims {
 export function verifyActivationToken(
   token: string,
   publicKeys: ReadonlyMap<string, KeyObject>,
-  options: { now: Date; deviceHash?: string },
+  options: {
+    now: Date;
+    deviceHash?: string;
+    /**
+     * Accept a token past its `exp`. Refresh and deactivate use this: an app
+     * that was offline longer than the token lifetime must still be able to
+     * refresh or free its seat. The signature is still checked.
+     */
+    allowExpired?: boolean;
+  },
 ): TokenVerification {
   const parts = token.split(".");
   if (parts.length !== 4 || parts[0] !== TOKEN_PREFIX) return { ok: false, reason: "malformed" };
@@ -99,7 +108,7 @@ export function verifyActivationToken(
     return { ok: false, reason: "malformed" };
   }
   if (!isClaims(claims)) return { ok: false, reason: "malformed" };
-  if (claims.exp <= Math.floor(options.now.getTime() / 1000)) return { ok: false, reason: "expired" };
+  if (!options.allowExpired && claims.exp <= Math.floor(options.now.getTime() / 1000)) return { ok: false, reason: "expired" };
   if (options.deviceHash !== undefined && claims.device_hash !== options.deviceHash) {
     return { ok: false, reason: "wrong_device" };
   }
