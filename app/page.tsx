@@ -74,7 +74,7 @@ const comparison: { feature: string; direct: string | boolean; store: string | b
   { feature: "All features, including MCP", direct: true, store: true },
   { feature: "Payment", direct: "Stripe, on seobasics.app", store: "Your Apple account" },
   { feature: "Activation", direct: "License key, up to 3 Macs", store: "None, via your Apple ID" },
-  { feature: "Works offline", direct: "Yes, re-checks the license every 30 days", store: "Yes" },
+  { feature: "Works offline", direct: "Yes, up to 30 days at a time", store: "Yes" },
   { feature: "Updates", direct: "Built-in, signed updates", store: "Mac App Store" },
   { feature: "Included updates", direct: "All 1.x releases", store: "All 1.x releases" },
   { feature: "App Sandbox", direct: false, store: true },
@@ -187,7 +187,7 @@ export default function Home() {
               {steps.map((step, i) => (
                 <div key={step.name} className="border-t border-neutral-950/10 pt-6 dark:border-white/10">
                   <dt className="flex items-baseline gap-3 font-medium">
-                    <span className="font-mono text-sm text-star-600 tabular-nums dark:text-star-400">0{i + 1}</span>
+                    <span className="font-mono text-sm text-star-700 tabular-nums dark:text-star-400">0{i + 1}</span>
                     <span className="text-lg/7">{step.name}</span>
                   </dt>
                   <dd className="mt-3 text-base/7 text-pretty text-neutral-600 sm:text-sm/6 dark:text-neutral-400">{step.body}</dd>

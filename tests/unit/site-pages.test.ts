@@ -33,3 +33,10 @@ test("the changelog lists only well-formed releases, newest first", () => {
   const dates = releases.map((release) => release.date);
   assert.deepEqual(dates, [...dates].sort().reverse());
 });
+
+test("the 404 page, prerendered at build time, has no canonical and is never indexable", () => {
+  // The root layout's canonical would carry the build's APP_URL (e.g. http://localhost:3000).
+  const source = readFileSync("app/not-found.tsx", "utf8");
+  assert.match(source, /alternates: \{\}/);
+  assert.match(source, /robots: \{ index: false, follow: false \}/);
+});

@@ -10,7 +10,7 @@ import { parseAllDocuments } from "yaml";
 const helm = (...args) => execFileSync("helm", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 const sets = (values) => Object.entries(values).flatMap(([key, value]) => ["--set", `${key}=${value}`]);
 
-process.stdout.write(helm("lint", "chart", "--strict", ...sets({ "onepassword.itemPath": "vaults/kube/items/lint" })));
+process.stdout.write(helm("lint", "chart", "--strict", ...sets({ "image.tag": "sha-lint", "onepassword.itemPath": "vaults/kube/items/lint" })));
 
 const render = (values) =>
   parseAllDocuments(helm("template", "seobasics", "chart", ...sets(values)))
@@ -47,26 +47,33 @@ for (const [name, values] of [["dev", dev], ["prod", prod]]) {
   if (values["purchase.appStoreUrl"]) expectedEnv.APP_STORE_URL = values["purchase.appStoreUrl"];
   assert.deepEqual(env, expectedEnv, `${name}: web env`);
   for (const probe of ["livenessProbe", "readinessProbe"]) assert.equal(container(web)[probe].httpGet.path, "/healthz");
-  const annotations = web.spec.template.metadata.annotations;
-  assert.equal(annotations["operator.1password.io/auto-restart"], "true");
-  assert.equal(annotations["operator.1password.io/item-path"], values["onepassword.itemPath"]);
+  // The operator reads auto-restart from the Deployment and the item, not from the pod template;
+  // the Secret comes only from the OnePasswordItem (no item-path annotation, no second copy).
+  assert.equal(web.metadata.annotations["operator.1password.io/auto-restart"], "true");
+  assert.equal(web.metadata.annotations["operator.1password.io/item-path"], undefined);
 
   // Order on every sync: OnePasswordItem (-20) → migrate Job (Sync hook, -10) → Deployment (0).
   const item = one("OnePasswordItem");
   assert.equal(item.spec.itemPath, values["onepassword.itemPath"]);
   assert.equal(item.metadata.annotations["argocd.argoproj.io/hook"], undefined, "the item is not a hook");
+  assert.equal(item.metadata.annotations["operator.1password.io/auto-restart"], "true");
   const migrate = one("Job", "-migrate");
   assert.equal(migrate.metadata.annotations["argocd.argoproj.io/hook"], "Sync", "Sync, never PreSync");
   assert.equal(migrate.metadata.annotations["argocd.argoproj.io/hook-delete-policy"], "BeforeHookCreation");
   assert.ok(wave(item) < wave(migrate) && wave(migrate) < wave(web), `${name}: wave order item < migrate < web`);
   assert.deepEqual(container(migrate).command, ["node", "dist/migrate.mjs"]);
   assert.equal(container(migrate).image, container(web).image);
-  assert.deepEqual(container(migrate).envFrom, container(web).envFrom);
+  // The migrate job gets the database URL and nothing else from the Secret (no signing key).
+  assert.equal(container(migrate).envFrom, undefined);
+  assert.deepEqual(container(migrate).env, [
+    { name: "DATABASE_URL", valueFrom: { secretKeyRef: { name: "seobasics", key: "DATABASE_URL" } } },
+  ]);
   assert.equal(migrate.spec.backoffLimit, 3);
   assert.equal(migrate.spec.activeDeadlineSeconds, 600);
 
   for (const workload of [web, migrate]) {
     const pod = workload.spec.template.spec;
+    assert.equal(pod.automountServiceAccountToken, false);
     assert.equal(pod.securityContext.runAsNonRoot, true);
     assert.equal(pod.securityContext.runAsUser, 1001);
     assert.equal(container(workload).securityContext.allowPrivilegeEscalation, false);
@@ -87,15 +94,17 @@ for (const [name, values] of [["dev", dev], ["prod", prod]]) {
   assert.equal(ingress.metadata.annotations["nginx.ingress.kubernetes.io/from-to-www-redirect"], www ? "true" : undefined);
   assert.deepEqual(ingress.spec.tls[0].hosts, www ? [values.host, `www.${values.host}`] : [values.host]);
 
-  // No secret value in any manifest: secrets only ever come from the 1Password item.
+  // No secret value in any manifest: secrets only ever come from the 1Password item. (DATABASE_URL
+  // appears only as the name of the key the migrate job reads.)
   const text = JSON.stringify(docs);
-  assert.doesNotMatch(text, /LICENSE_SIGNING_KEY|PRIVATE KEY|DATABASE_URL|postgres(ql)?:\/\/|sk_(live|test)_|whsec_|SEOB-[0-9A-Z]{5}/, `${name}: no secrets`);
+  assert.doesNotMatch(text, /LICENSE_SIGNING_KEY|PRIVATE KEY|postgres(ql)?:\/\/|sk_(live|test)_|whsec_|SEOB-[0-9A-Z]{5}/, `${name}: no secrets`);
   assert.equal(docs.some((doc) => ["Secret", "ConfigMap", "PersistentVolumeClaim"].includes(doc.kind)), false);
   console.log(`OK (${name}): ${docs.length} resources: ${docs.map((doc) => doc.kind).join(", ")}`);
 }
 
-// Every release must name its own 1Password item: there is no shared default.
-assert.throws(() => render({ host: "dev.seobasics.app" }), /onepassword.itemPath is required/);
+// Every release must name its own 1Password item and an immutable image tag: no shared defaults.
+assert.throws(() => render({ host: "dev.seobasics.app", "image.tag": "sha-abc123" }), /onepassword.itemPath is required/);
+assert.throws(() => render({ host: "dev.seobasics.app", "onepassword.itemPath": "vaults/kube/items/x" }), /image.tag is required/);
 // Without a host there is no Ingress.
-assert.equal(render({ "onepassword.itemPath": "vaults/kube/items/x" }).some((doc) => doc.kind === "Ingress"), false);
-console.log("OK: no default 1Password item; no host renders no Ingress");
+assert.equal(render({ "image.tag": "sha-abc123", "onepassword.itemPath": "vaults/kube/items/x" }).some((doc) => doc.kind === "Ingress"), false);
+console.log("OK: no default 1Password item or image tag; no host renders no Ingress");

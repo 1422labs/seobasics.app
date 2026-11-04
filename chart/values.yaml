@@ -5,8 +5,8 @@
 # One image for the web server and the migrate job.
 image:
   repository: registry.hilars.dev/seobasics/app
-  # CI sets this to sha-<commit>.
-  tag: latest
+  # Required: the immutable sha-<commit> tag CI pushes. No default, so nothing deploys `latest`.
+  tag: ""
   pullPolicy: IfNotPresent
 imagePullSecrets: []
 
@@ -21,7 +21,7 @@ ingress:
   redirectWww: false
 
 # Secrets come from one 1Password item per environment, through the operator. Its fields
-# become environment variables of the web server and the migrate job:
+# become environment variables of the web server; the migrate job gets only DATABASE_URL:
 #
 #   DATABASE_URL                  this environment's database
 #   LICENSE_SIGNING_KEY           this environment's Ed25519 private key (PEM, PKCS#8)

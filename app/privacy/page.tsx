@@ -78,7 +78,7 @@ export default function Privacy() {
             {
               term: "Activations",
               detail:
-                "For each Mac: a hash of a random identifier the app creates, the app version, optionally the Mac's name, and when it was activated and last checked.",
+                "For each Mac: a hash of a random identifier the app creates, the app version, optionally the Mac's name, when it was activated and last checked, and when it was deactivated. A deactivated Mac's record is kept, so the license's history stays complete.",
             },
           ]}
         />

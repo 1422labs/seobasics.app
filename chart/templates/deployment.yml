@@ -6,6 +6,8 @@ metadata:
   labels:
     {{- include "seobasics.labels" . | nindent 4 }}
     app.kubernetes.io/component: web
+  annotations:
+    {{- include "seobasics.restartAnnotation" . | nindent 4 }}
 spec:
   replicas: {{ .Values.web.replicas }}
   selector:
@@ -17,9 +19,8 @@ spec:
       labels:
         {{- include "seobasics.selector" . | nindent 8 }}
         app.kubernetes.io/component: web
-      annotations:
-        {{- include "seobasics.podAnnotations" . | nindent 8 }}
     spec:
+      automountServiceAccountToken: false
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}

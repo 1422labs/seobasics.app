@@ -74,7 +74,7 @@ export function List({ items, ordered = false }: { items: React.ReactNode[]; ord
       {items.map((item, i) => (
         <li key={i} className="flex gap-3 text-base/7 text-pretty text-neutral-600 dark:text-neutral-400">
           {ordered ? (
-            <span className="w-5 shrink-0 font-mono text-sm/7 text-star-600 tabular-nums dark:text-star-400">{i + 1}</span>
+            <span className="w-5 shrink-0 font-mono text-sm/7 text-star-700 tabular-nums dark:text-star-400">{i + 1}</span>
           ) : (
             <span aria-hidden="true" className="mt-[0.6875rem] size-1.5 shrink-0 rounded-full bg-neutral-300 dark:bg-neutral-600" />
           )}

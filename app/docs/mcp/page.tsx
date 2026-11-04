@@ -105,8 +105,9 @@ export default function McpDocs() {
           ]}
         />
         <Note>
-          The access token works like a password for the server. Keep it out of repositories and shared dotfiles. The examples below read it from the{" "}
-          <C>SEOBASICS_TOKEN</C> environment variable. If it leaks, click Regenerate in Settings → MCP; the old token stops working at once.
+          The access token works like a password for the server. Keep it out of repositories and shared dotfiles. Codex reads it from the{" "}
+          <C>SEOBASICS_TOKEN</C> environment variable each time it starts. <C>claude mcp add</C> expands the variable once and saves the token itself
+          in Claude Code&apos;s configuration, so run Regenerate and add the server again if that file is ever shared. If it leaks, click Regenerate in Settings → MCP; the old token stops working at once.
         </Note>
       </Section>
 
@@ -180,8 +181,8 @@ export default function McpDocs() {
           }))}
         />
         <P>
-          Arguments marked <C>?</C> are optional. Every tool except <C>scan_website</C> only reads; <C>scan_website</C> starts a crawl, which sends
-          requests to the site you name.
+          Arguments marked <C>?</C> are optional. <C>scan_website</C> starts a crawl of the site you name. <C>inspect_page</C> without a{" "}
+          <C>scan_id</C> and <C>verify_urls</C> fetch the URLs you pass. The other tools only read scans already on your Mac.
         </P>
       </Section>
 

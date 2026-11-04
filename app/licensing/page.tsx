@@ -64,7 +64,7 @@ export default function Licensing() {
       <Section id="activation-data" title="What activation sends">
         <P>
           Activating sends your license key, a random identifier the app creates for your Mac, the app version and, optionally, your Mac&apos;s name, so you
-          can tell your Macs apart. We store only a hash of the key and of the identifier. No hardware serial numbers or MAC addresses are used.
+          can tell your Macs apart. We store a hash of the key and its last four characters, so support can recognize it, and only a hash of the identifier, never the key or the identifier itself. No hardware serial numbers or MAC addresses are used.
           Details are in the <TextLink href="/privacy">privacy policy</TextLink>.
         </P>
       </Section>

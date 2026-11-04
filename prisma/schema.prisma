@@ -42,8 +42,8 @@ model License {
 model LicenseActivation {
   id              String    @id @default(cuid())
   licenseId       String
-  /// SHA-256 of the app's per-install random device id; the raw id never
-  /// leaves the Mac in readable form.
+  /// SHA-256 of the app's per-install random device id. The app sends the raw
+  /// id over TLS; the server hashes it on arrival and never stores it.
   deviceHash      String
   /// User-visible Mac name, for "deactivate a Mac" lists. Optional.
   deviceName      String?

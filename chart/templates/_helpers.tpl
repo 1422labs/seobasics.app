@@ -27,16 +27,20 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
 {{- define "seobasics.image" -}}
-{{ .Values.image.repository }}:{{ .Values.image.tag }}
+{{ .Values.image.repository }}:{{ required "image.tag is required: an immutable sha-<commit> tag, never latest" .Values.image.tag }}
 {{- end -}}
 
-{{/* Pods restart when the 1Password item changes. */}}
-{{- define "seobasics.podAnnotations" -}}
-operator.1password.io/item-path: {{ include "seobasics.itemPath" . | quote }}
-operator.1password.io/item-name: {{ include "seobasics.secretName" . | quote }}
+{{/*
+The operator restarts a Deployment that uses the item's Secret when the item changes, if the
+Deployment (or the OnePasswordItem) has this annotation; it does not read pod-template
+annotations. The Secret itself comes only from the OnePasswordItem: no item-path annotation,
+so the operator doesn't manage a second copy.
+*/}}
+{{- define "seobasics.restartAnnotation" -}}
 operator.1password.io/auto-restart: "true"
 {{- end -}}
 
+{{/* Neither pod talks to the Kubernetes API. */}}
 {{- define "seobasics.podSecurityContext" -}}
 runAsNonRoot: true
 runAsUser: 1001
