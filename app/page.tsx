@@ -1,21 +1,13 @@
-import { CheckIcon, MenuIcon, MinusIcon } from "lucide-react";
-import Link from "next/link";
+import { MinusIcon } from "lucide-react";
 import { AgentSession } from "@/components/agent-session";
+import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { StarMark } from "@/components/star-mark";
+import { Check, container, OutlineButton, SecondaryLink } from "@/components/ui";
 import { appUrl } from "@/lib/env";
 import { purchaseLinks, site } from "@/lib/site";
 
 // Indexing (layout metadata) and purchase links depend on the deployment's env, not the build's.
 export const dynamic = "force-dynamic";
-
-const container = "mx-auto max-w-6xl px-4 sm:px-6 lg:px-8";
-
-const nav = [
-  { href: "#checks", label: "What it checks" },
-  { href: "#mcp", label: "MCP" },
-  { href: "#pricing", label: "Pricing" },
-  { href: "#faq", label: "FAQ" },
-];
 
 const checks = [
   {
@@ -119,10 +111,6 @@ const faqs = [
   },
 ];
 
-function Check() {
-  return <CheckIcon className="size-4 h-lh shrink-0 stroke-star-600 dark:stroke-star-400" aria-hidden="true" />;
-}
-
 function Cell({ value }: { value: string | boolean }) {
   if (value === true)
     return (
@@ -139,34 +127,6 @@ function Cell({ value }: { value: string | boolean }) {
       </>
     );
   return <>{value}</>;
-}
-
-function Logo() {
-  return (
-    <Link href="/" aria-label="Homepage" className="flex items-center gap-2.5">
-      <StarMark className="size-7 shrink-0 fill-star-500" />
-      <span className="text-[1.0625rem] font-semibold tracking-tight">SEO Basics</span>
-    </Link>
-  );
-}
-
-function SecondaryLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <a href={href} className="text-base/7 font-semibold text-neutral-950 hover:text-neutral-700 sm:text-sm/6 dark:text-white dark:hover:text-neutral-300">
-      {children} <span aria-hidden="true">→</span>
-    </a>
-  );
-}
-
-function OutlineButton({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <a
-      href={href}
-      className="inline-flex justify-center rounded-lg px-4 py-2.5 text-base/6 font-semibold text-neutral-950 ring-1 ring-neutral-950/15 hover:bg-neutral-950/[0.03] sm:py-2 sm:text-sm/6 dark:text-white dark:ring-white/20 dark:hover:bg-white/5"
-    >
-      {children}
-    </a>
-  );
 }
 
 export default function Home() {
@@ -186,45 +146,7 @@ export default function Home() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
 
-      <header className="sticky top-0 z-10 border-b border-neutral-950/5 bg-white/90 backdrop-blur dark:border-white/10 dark:bg-neutral-950/90">
-        <div className={`${container} flex h-16 items-center`}>
-          <div className="flex flex-1 items-center">
-            <Logo />
-          </div>
-          <nav aria-label="Main" className="flex items-center gap-x-8 max-lg:hidden">
-            {nav.map((item) => (
-              <a key={item.href} href={item.href} className="text-sm/6 text-neutral-600 hover:text-neutral-950 dark:text-neutral-400 dark:hover:text-white">
-                {item.label}
-              </a>
-            ))}
-          </nav>
-          <div className="flex flex-1 items-center justify-end gap-x-2">
-            <a
-              href={links.checkout}
-              className="rounded-lg px-3 py-1.5 text-sm/6 font-semibold text-neutral-950 ring-1 ring-neutral-950/15 hover:bg-neutral-950/[0.03] dark:text-white dark:ring-white/20 dark:hover:bg-white/5"
-            >
-              Buy <span className="tabular-nums">{site.price}</span>
-            </a>
-            <details className="group relative lg:hidden">
-              <summary className="relative flex size-9 cursor-pointer list-none items-center justify-center rounded-lg hover:bg-neutral-950/5 dark:hover:bg-white/10 [&::-webkit-details-marker]:hidden">
-                <span className="absolute top-1/2 left-1/2 size-[max(100%,3rem)] -translate-1/2 pointer-fine:hidden" aria-hidden="true" />
-                <MenuIcon className="size-5 shrink-0 stroke-neutral-700 dark:stroke-neutral-300" aria-hidden="true" />
-                <span className="sr-only">Open menu</span>
-              </summary>
-              <nav
-                aria-label="Mobile"
-                className="absolute right-0 mt-2 flex w-56 flex-col rounded-xl bg-white p-2 shadow-lg ring-1 ring-black/5 dark:bg-neutral-900 dark:shadow-none dark:ring-white/10"
-              >
-                {nav.map((item) => (
-                  <a key={item.href} href={item.href} className="rounded-lg px-3 py-2.5 text-base/6 text-neutral-700 hover:bg-neutral-950/5 dark:text-neutral-300 dark:hover:bg-white/5">
-                    {item.label}
-                  </a>
-                ))}
-              </nav>
-            </details>
-          </div>
-        </div>
-      </header>
+      <SiteHeader />
 
       <main>
         {/* Hero */}
@@ -347,6 +269,9 @@ export default function Home() {
                     {"\n"}bearer_token_env_var = <span className="text-star-300">&quot;SEOBASICS_TOKEN&quot;</span>
                   </code>
                 </pre>
+                <p className="mt-5">
+                  <SecondaryLink href="/docs/mcp">Full setup guide</SecondaryLink>
+                </p>
               </div>
               <div>
                 <h3 className="text-base/7 font-medium">Private by design</h3>
@@ -423,7 +348,7 @@ export default function Home() {
 
             <div className="mx-auto mt-20 max-w-4xl">
               <h3 className="text-lg/7 font-semibold">Direct or Mac App Store?</h3>
-              <div className="mt-6 -mx-4 -my-2 overflow-x-auto whitespace-nowrap sm:-mx-6 lg:-mx-8">
+              <div className="relative mt-6 -mx-4 -my-2 overflow-x-auto whitespace-nowrap sm:-mx-6 lg:-mx-8">
                 <div className="inline-block min-w-full px-4 py-2 align-middle sm:px-6 lg:px-8">
                   <table className="w-full text-left text-base/7 sm:text-sm/6">
                     <thead>
@@ -502,21 +427,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="border-t border-neutral-950/5 py-12 dark:border-white/10">
-        <div className={`${container} flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between`}>
-          <div className="flex items-center gap-2.5">
-            <StarMark small className="size-6 shrink-0 fill-star-500" />
-            <p className="text-base/7 text-neutral-600 sm:text-sm/6 dark:text-neutral-400">© 2026 SEO Basics</p>
-          </div>
-          <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2">
-            {nav.map((item) => (
-              <a key={item.href} href={item.href} className="text-base/7 font-normal text-neutral-600 hover:text-neutral-950 sm:text-sm/6 dark:text-neutral-400 dark:hover:text-white">
-                {item.label}
-              </a>
-            ))}
-          </nav>
-        </div>
-      </footer>
+      <SiteFooter />
     </>
   );
 }
