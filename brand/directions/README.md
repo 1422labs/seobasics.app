@@ -1,5 +1,8 @@
 # Star mark directions (for selection)
 
+> Superseded. Lars chose A on 2026-11-04 with a refinement brief; the redesigned
+> mark is in `../mark/`. These sketches stay for the record.
+
 Four star-mark directions for SEO Basics, from the Brand and Design Brief.
 Open `contact-sheet.png` (or `contact-sheet.html` in a browser).
 
