@@ -82,10 +82,19 @@ jobs:
           TEST_DATABASE_URL: postgresql://ci:ci@localhost:5432/seobasics_ci
         run: pnpm test:integration
 
+  chart:
+    name: Helm chart
+    runs-on: arc-1422labs
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      # helm is baked into the runner image. Renders and checks only; nothing is applied.
+      - run: pnpm check:chart
+
   mandatory-checks:
     name: Mandatory checks
     if: always()
-    needs: [runner-policy, checks, build, database]
+    needs: [runner-policy, checks, build, database, chart]
     runs-on: arc-1422labs
     steps:
       - name: Require every check to succeed
@@ -93,4 +102,4 @@ jobs:
           NEEDS: ${{ toJSON(needs) }}
         run: |
           jq -r 'to_entries[] | "\(.key): \(.value.result)"' <<< "${NEEDS}"
-          jq -e 'length == 4 and all(.[]; .result == "success")' <<< "${NEEDS}" > /dev/null
+          jq -e 'length == 5 and all(.[]; .result == "success")' <<< "${NEEDS}" > /dev/null

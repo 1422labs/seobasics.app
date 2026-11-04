@@ -1,0 +1,6 @@
+apiVersion: v2
+name: seobasics
+description: seobasics.app, the website and direct-edition license API of SEO Basics
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

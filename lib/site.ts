@@ -52,11 +52,14 @@ export function pageMetadata(path: Exclude<PagePath, "/">, title: string, descri
  * Purchase links. Stripe Checkout and the App Store listing don't exist yet
  * (owner gates: Stripe price IDs, App Store Connect). Until they do, both
  * actions point at the pricing section; set the env vars once they exist.
+ * Read per request (every page is force-dynamic), and deliberately not
+ * NEXT_PUBLIC_: Next.js would inline those at build time into the one image
+ * that dev and prod share.
  */
 export function purchaseLinks() {
   return {
-    checkout: process.env.NEXT_PUBLIC_CHECKOUT_URL || "/#pricing",
-    appStore: process.env.NEXT_PUBLIC_APP_STORE_URL || "/#pricing",
+    checkout: process.env.CHECKOUT_URL || "/#pricing",
+    appStore: process.env.APP_STORE_URL || "/#pricing",
   };
 }
 

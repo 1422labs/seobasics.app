@@ -4,6 +4,8 @@
 @source not "../dev_db";
 @source not "../brand";
 @source not "../generated";
+@source not "../dist";
+@source not "../chart";
 
 /* Inter (OFL, public/fonts/Inter-LICENSE.txt), self-hosted so the site makes no third-party font requests. */
 @font-face {

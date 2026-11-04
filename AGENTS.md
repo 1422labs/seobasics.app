@@ -7,16 +7,28 @@ Next.js (App Router) site and the versioned license API for the direct
 
 ## Layout
 
-- `app/`: routes. The landing page (`page.tsx`), `robots.ts`, `sitemap.ts`,
+- `app/`: routes. The landing page (`page.tsx`), the content pages
+  (`docs/mcp`, `changelog`, `support`, `licensing`, `privacy`), `robots.ts`, `sitemap.ts`,
   `healthz` (k8s probe) and `/_dev/version` (`app/%5Fdev`, deploy check).
   Load the `design` skill before any UI work. Tailwind v4 (`globals.css`,
   `@source not` excludes the unreadable `dev_db/data`).
   - Indexing is decided per request: only `APP_URL=https://seobasics.app` is
     indexable (`lib/site.ts`), so the same image never lets `dev.` be indexed.
-  - Purchase links come from `NEXT_PUBLIC_CHECKOUT_URL` and
-    `NEXT_PUBLIC_APP_STORE_URL`. Until Stripe and App Store exist they point
-    at `/#pricing`.
-- `components/`: page components. `star-mark.tsx` renders
+  - Every page, `robots.ts` and `sitemap.ts` are `force-dynamic`, and every
+    content page sets its own canonical with `pageMetadata()` (the root
+    layout's is `/`). A new page goes into `pages` in `lib/site.ts`;
+    `tests/unit/site-pages.test.ts` checks all three.
+  - Purchase links come from the runtime env `CHECKOUT_URL` and
+    `APP_STORE_URL` (never `NEXT_PUBLIC_`, which is inlined at build time).
+    Until Stripe and App Store exist they point at `/#pricing`.
+  - `publisher` in `lib/site.ts` (company name, support email) is an owner
+    decision; until it is set, support and privacy show a "published before
+    launch" note.
+  - `lib/changelog.ts`: add a release only once it has shipped.
+  - The privacy and licensing pages state what the code stores. Change them
+    with any change to the schema, analytics, fonts or the license policy.
+- `components/`: page components. `site-chrome.tsx` (header, footer),
+  `content-page.tsx` (text-page layout and typography), `ui.tsx` (buttons). `star-mark.tsx` renders
   `brand/mark/paths.json`, and `agent-session.tsx` is the hero's MCP example,
   which uses real tool names and fields from the app's catalog.
 - `public/fonts/`: self-hosted InterVariable (OFL), with no third-party font requests.
@@ -30,6 +42,17 @@ Next.js (App Router) site and the versioned license API for the direct
   `/api/v1/activations`, `/refresh` and `/deactivate`.
 - `lib/api.ts`: the `/api/v1` error envelope and codes. These are a stable
   contract: add to it, never rename.
+- `lib/migrate.ts`: applies `prisma/migrations` like `prisma migrate deploy`,
+  without the Prisma CLI; `scripts/migrate.ts` is the image's migrate job,
+  bundled to `dist/migrate.mjs` by `pnpm build:tools`.
+- `Dockerfile`: one image for dev and prod (`node server.js`, and `node
+  dist/migrate.mjs` for the migrate job), non-root, nothing writable under
+  `/app`. All environment-specific values are runtime env.
+- `chart/`: Helm chart, for review; nothing deploys it yet. OnePasswordItem
+  (sync-wave −20) → migrate Job as an Argo `Sync` hook (−10, never
+  `PreSync`) → Deployment. Each release must set its own
+  `onepassword.itemPath`; there is no default. `scripts/check-chart.mjs`
+  guards all of this.
 - `lib/env.ts`, `lib/logger.ts` (`redactSecrets` strips license keys, tokens
   and Stripe secrets), `lib/prisma.ts`.
 - `prisma/`: Prisma 7 schema and migrations; the client is generated into
@@ -49,20 +72,26 @@ pnpm dev                                            # http://localhost:3000
 pnpm lint && pnpm typecheck && pnpm test && pnpm build
 TEST_DATABASE_URL=<dedicated migrated db> pnpm test:integration  # empties license tables
 DATABASE_URL=<empty db> pnpm check:migrations       # migrations == schema
+pnpm check:chart                                    # helm lint + render checks, applies nothing
+docker build -t seobasics-app:review .
+DATABASE_URL=<empty db> sh scripts/smoke-image.sh   # image: migrate job + server, read-only rootfs
 ```
 
 ## CI
 
 `.github/workflows/ci.yml` has these jobs: `runner-policy`, `checks` (lint,
 typecheck, unit tests), `build`, `database` (Postgres 16 service,
-`check:migrations`, then `test:integration` on the same database) and the `Mandatory checks` gate.
+`check:migrations`, then `test:integration` on the same database), `chart`
+(`check:chart`) and the `Mandatory checks` gate. No job builds or pushes the
+image yet; that needs the shared BuildKit endpoint and Harbor credentials.
 
 - Every job uses exactly `runs-on: arc-1422labs`;
   `scripts/check-workflow-runners.sh` and `tests/unit/ci-workflow.test.ts`
   enforce this.
 - A new job must be added to the gate's `needs`, and the gate's
   `length == N` must be updated to match.
-- No deploy workflow exists yet. Deploys, Stripe objects and secrets need
+- No deploy or image workflow and no argo-deployments entry exist yet.
+  Deploys, registry pushes, Argo entries, Stripe objects and secrets need
   Lars's explicit decision.
 
 ## Rules

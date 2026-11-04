@@ -1,0 +1,47 @@
+# One chart, two releases: dev.seobasics.app and seobasics.app. They never share a database,
+# signing key, Stripe mode or 1Password item; the per-environment values live in
+# 1422labs/argo-deployments (not created yet: deploying needs Lars's decision).
+
+# One image for the web server and the migrate job.
+image:
+  repository: registry.hilars.dev/seobasics/app
+  # CI sets this to sha-<commit>.
+  tag: latest
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+# The public host, e.g. dev.seobasics.app or seobasics.app. APP_URL is derived from it, and
+# only https://seobasics.app is indexable (lib/site.ts). Empty = no Ingress.
+host: ""
+
+ingress:
+  className: nginx
+  clusterIssuer: letsencrypt-prod
+  # Production only: also serve www.<host> and redirect it to <host>.
+  redirectWww: false
+
+# Secrets come from one 1Password item per environment, through the operator. Its fields
+# become environment variables of the web server and the migrate job:
+#
+#   DATABASE_URL                  this environment's database
+#   LICENSE_SIGNING_KEY           this environment's Ed25519 private key (PEM, PKCS#8)
+#   LICENSE_SIGNING_KID           its key id, e.g. dev1 or prod1
+#   LICENSE_PREVIOUS_PUBLIC_KEYS  optional, only after a key rotation (docs/license-api-v1.md)
+#
+# There is no default: each release must name its own item, so dev and prod can't end up
+# sharing one. Without the signing key the license API answers 503 not_configured.
+onepassword:
+  itemPath: ""
+  # Name of the Secret the operator creates. Defaults to the release's full name.
+  secretName: ""
+
+# Purchase links, read per request (lib/site.ts). Empty = both point at /#pricing.
+purchase:
+  checkoutUrl: ""
+  appStoreUrl: ""
+
+web:
+  replicas: 1
+  resources:
+    requests: { cpu: 25m, memory: 128Mi }
+    limits: { memory: 384Mi }
