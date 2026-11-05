@@ -5,29 +5,29 @@
 Writes the vector masters to brand/mark/, the macOS AppIcon.appiconset and the
 test sheet (both PNG, rendered with headless Chrome), and the web icons used by
 the site (app/icon.svg, app/apple-icon.png, app/favicon.ico, public/brand/).
-Needs only Python 3 and google-chrome.
+Needs only Python 3 and Google Chrome (found by render.py; set CHROME to override).
 """
-import json, math, os, struct, subprocess, sys, tempfile
+import json, math, os, struct, sys, tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, HERE)
-from star import star_path  # noqa: E402
+from star import GEOMETRY, mark_paths  # noqa: E402
+from render import render  # noqa: E402
 
 # Palette. Gold is the only brand colour; everything else is warm neutral.
 GOLD = "#F2A900"        # star
 GOLD_GLOW = "#FFC531"   # icon halo only
+GOLD_CORE = "#FFE7A3"   # icon: inner glow
+GOLD_TOP, GOLD_BOTTOM = "#FFC21A", "#F0A200"  # icon: top-lit star fill
 INK = "#17181B"         # monochrome on light
 PAPER = "#FFFFFF"       # monochrome on dark
-TILE_DARK = ("#232428", "#141518")
-TILE_LIGHT = ("#FFFFFF", "#F3F1EC")
+TILE_DARK = ("#26272B", "#121316")
+TILE_LIGHT = ("#FFFFFF", "#F2F0EA")
 
-# Master geometry (100 x 100). FULL is used from 32 px up; SMALL drops the
-# light cut, which would only blur at 16-24 px.
-GEOMETRY = dict(R=46, ratio=0.47, cx=50, cy=52.5, tip_r=4.2, inner_r=2.6,
-                cut_arm=1, cut_from_tip=0.42, cut_gap=3.2, cut_tilt=-20)
-FULL = star_path(**GEOMETRY)
-SMALL = star_path(**{**GEOMETRY, "cut_arm": None, "tip_r": 3.6, "inner_r": 2.2})
+# Master geometry (100 x 100), from star.py. FULL is used from 32 px up; SMALL
+# (larger twinkle) from 16 to 24 px.
+FULL, SMALL, CENTRE = mark_paths()
 
 
 def mark_svg(d, fill, title="SEO Basics"):
@@ -47,25 +47,29 @@ def squircle(cx, cy, half, n=5.0, steps=360):
     return "M" + " L".join(pts) + " Z"
 
 
-def icon_svg(dark=True, glow=True):
-    """1024 macOS icon: 824 tile on the Big Sur grid, star at ~56% of the tile."""
+def icon_svg(dark=True, glow=True, mark=None):
+    """1024 macOS icon: 824 tile on the Big Sur grid, gold glow centred on the star."""
+    d = mark or FULL
     top, bottom = TILE_DARK if dark else TILE_LIGHT
-    edge = "#FFFFFF" if dark else "#17181B"
-    edge_op = 0.08 if dark else 0.07
-    halo = (f'<circle cx="512" cy="520" r="330" fill="url(#halo)"/>' if glow else "")
-    halo_op = 0.30 if dark else 0.22
-    scale = 5.3
-    off = 512 - 50 * scale
+    edge, edge_op = ("#FFFFFF", 0.09) if dark else ("#17181B", 0.07)
+    k = 5.0                                  # mark space -> 1024 tile
+    off = 512 - 50 * k
+    gx, gy = off + CENTRE[0] * k, off + CENTRE[1] * k
+    a1, a2 = (0.42, 0.30) if dark else (0.30, 0.20)
+    halo = (f'<g clip-path="url(#clip)"><rect width="1024" height="1024" fill="url(#halo)"/>'
+            f'<rect width="1024" height="1024" fill="url(#core)"/></g>') if glow else ""
     return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
 <defs>
 <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{top}"/><stop offset="1" stop-color="{bottom}"/></linearGradient>
-<radialGradient id="halo"><stop offset="0" stop-color="{GOLD_GLOW}" stop-opacity="{halo_op}"/><stop offset="0.55" stop-color="{GOLD_GLOW}" stop-opacity="{halo_op / 3:.3f}"/><stop offset="1" stop-color="{GOLD_GLOW}" stop-opacity="0"/></radialGradient>
+<radialGradient id="halo" cx="{gx:.1f}" cy="{gy:.1f}" r="420" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="{GOLD_GLOW}" stop-opacity="{a1}"/><stop offset="0.35" stop-color="{GOLD_GLOW}" stop-opacity="{a2 / 2:.3f}"/><stop offset="1" stop-color="{GOLD_GLOW}" stop-opacity="0"/></radialGradient>
+<radialGradient id="core" cx="{gx:.1f}" cy="{gy:.1f}" r="170" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="{GOLD_CORE}" stop-opacity="{a2}"/><stop offset="1" stop-color="{GOLD_CORE}" stop-opacity="0"/></radialGradient>
+<linearGradient id="star" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{GOLD_TOP}"/><stop offset="1" stop-color="{GOLD_BOTTOM}"/></linearGradient>
 <clipPath id="clip"><path d="{squircle(512, 512, 412)}"/></clipPath>
 </defs>
 <path d="{squircle(512, 512, 412)}" fill="url(#tile)"/>
-<g clip-path="url(#clip)">{halo}</g>
+{halo}
 <path d="{squircle(512, 512, 411)}" fill="none" stroke="{edge}" stroke-opacity="{edge_op}" stroke-width="2"/>
-<g transform="translate({off:.1f} {off:.1f}) scale({scale})"><path d="{FULL}" fill="{GOLD}"/></g>
+<g transform="translate({off:.1f} {off:.1f}) scale({k})"><path d="{d}" fill="url(#star)"/></g>
 </svg>
 '''
 
@@ -74,17 +78,6 @@ def write(path, text):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as fh:
         fh.write(text)
-
-
-def render(svg_path, png_path, w, h=None):
-    h = h or w
-    subprocess.run(["google-chrome", "--headless=new", "--hide-scrollbars", "--disable-gpu",
-                    "--default-background-color=00000000", f"--window-size={w},{h}",
-                    f"--screenshot={png_path}", "file://" + svg_path],
-                   check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    with open(png_path, "rb") as fh:
-        head = fh.read(24)
-    assert struct.unpack(">II", head[16:24]) == (w, h), f"{png_path}: wrong size"
 
 
 def ico(pngs, path):
@@ -111,6 +104,7 @@ def main():
     write(f"{out}/seobasics-icon.svg", icon_svg(dark=True))
     write(f"{out}/seobasics-icon-light.svg", icon_svg(dark=False))
     write(f"{out}/seobasics-icon-flat.svg", icon_svg(dark=True, glow=False))
+    write(f"{out}/seobasics-icon-small.svg", icon_svg(dark=True, mark=SMALL))
     with open(f"{out}/paths.json", "w") as fh:
         json.dump({"viewBox": "0 0 100 100", "full": FULL, "small": SMALL, "geometry": GEOMETRY}, fh, indent=2)
         fh.write("\n")
@@ -123,7 +117,9 @@ def main():
         for scale in (1, 2):
             px = pt * scale
             name = f"icon_{pt}x{pt}{'@2x' if scale == 2 else ''}.png"
-            render(f"{out}/seobasics-icon.svg", f"{iconset}/{name}", px)
+            # 16 and 32 px tiles carry the small mark, whose twinkle survives at that size
+            master = "seobasics-icon-small.svg" if px <= 32 else "seobasics-icon.svg"
+            render(f"{out}/{master}", f"{iconset}/{name}", px)
             images.append({"filename": name, "idiom": "mac", "scale": f"{scale}x", "size": f"{pt}x{pt}"})
     with open(f"{iconset}/Contents.json", "w") as fh:
         json.dump({"images": images, "info": {"author": "xcode", "version": 1}}, fh, indent=2)
@@ -197,7 +193,7 @@ figcaption{{font-size:11px;color:#8A8C93;font-variant-numeric:tabular-nums}}
 .lock.lt{{background:#fff;padding:26px 30px;border-radius:14px;outline:1px solid rgb(23 24 27 / .08)}}
 </style></head><body><main>
 <h1>SEO Basics: star mark</h1>
-<p class="lede">Direction A, refined. A full five-point star with filleted tips and inner corners, in the warm proportions of the 🌟 reference. One thin diagonal light cut crosses the upper-right arm as a glint. From 32 px up the mark is the full star; at 16 to 24 px the small variant drops the cut so the silhouette stays clean.</p>
+<p class="lede">Direction H, "Glint", approved by Lars on 2026-11-05. A full five-point star with filleted tips and inner corners, and one small four-point twinkle in its upper-right crook: the sparkle of the 🌟 reference, kept to a single accent. From 32 px up it is the full mark; at 16 to 24 px the small variant sets a larger twinkle slightly further out so it survives.</p>
 
 <h2>macOS app icon (rendered AppIcon.appiconset PNGs)</h2>
 <div class="tiles">{icon_cells}</div>
@@ -221,11 +217,11 @@ figcaption{{font-size:11px;color:#8A8C93;font-variant-numeric:tabular-nums}}
 <div class="cs"><div class="box"></div>{m(FULL, GOLD, 200)}</div>
 <ul class="notes">
 <li>Clear space on every side: one quarter of the mark's height (dashed box = mark bounds, outer square = minimum clear area).</li>
-<li>Full mark (with the light cut): 32 px and larger.</li>
-<li>Small mark (no cut): 16 to 24 px: favicon, sidebar, menu bar, toolbar.</li>
+<li>Full mark: 32 px and larger.</li>
+<li>Small mark (larger twinkle): 16 to 24 px: favicon, sidebar, menu bar, toolbar, and the 16/32 px app icon tiles.</li>
 <li>Minimum size: 16 px on screen, 6 mm in print.</li>
-<li>Colour: gold #F2A900 on light or dark; ink #17181B or white when one colour is required. Never recolour the star in other hues, outline it, add effects or rotate it.</li>
-<li>The halo exists only inside the app icon tile. The mark itself is always flat.</li>
+<li>Colour: gold #F2A900 on light or dark; ink #17181B or white when one colour is required. Star and twinkle always share one colour. Never recolour, outline, rotate, add effects, or move or drop the twinkle.</li>
+<li>The glow and the top-lit fill exist only inside the app icon tile. The mark itself is always flat, one colour.</li>
 </ul>
 </div>
 </main></body></html>

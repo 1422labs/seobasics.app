@@ -57,10 +57,11 @@ Next.js (App Router) site and the versioned license API for the direct
   and Stripe secrets), `lib/prisma.ts`.
 - `prisma/`: Prisma 7 schema and migrations; the client is generated into
   `generated/` (gitignored).
-- `brand/mark/`: the star mark (refined direction A, awaiting Lars's final
-  approval). `python3 -I brand/mark/generate.py` regenerates the SVGs, the
+- `brand/mark/`: the star mark (direction H "Glint", approved by Lars on
+  2026-11-05). `python3 -I brand/mark/generate.py` regenerates the SVGs, the
   AppIcon.appiconset, the web icons in `app/` and `public/brand/`, and the
-  test sheet. `brand/directions/` holds the superseded sketches.
+  test sheet (needs Google Chrome; `CHROME` overrides the path).
+  `brand/directions/` holds both selection rounds.
 
 ## Commands
 

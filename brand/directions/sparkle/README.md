@@ -1,4 +1,7 @@
-# Star mark: sparkle round (E–H, for selection)
+# Star mark: sparkle round (E–H)
+
+> Lars chose **H · Glint** on 2026-11-05. It is now the mark in `../../mark/`;
+> this folder stays as the record of the round.
 
 Lars declined the refined Notch mark in `../../mark/` on 2026-11-05: "we need
 something more sparkling, like the emoji and more professional". This round
@@ -23,7 +26,7 @@ and the marks are drawn from geometry in code, as before.
 
 Files:
 
-- `geom.py`: rounded polygons, concave sparkle curves, outline offsets.
+- `../../mark/geom.py`: rounded polygons, concave sparkle curves, outline offsets (shared with the final mark).
 - `directions.py`: the four shape builders and their parameters.
 - `generate.py`: `python3 -I brand/directions/sparkle/generate.py` from the
   repository root writes `<key>-<name>{,-small}-{gold,ink,white}.svg`,
@@ -31,5 +34,3 @@ Files:
 - Rendering uses `../../mark/render.py` (headless Chrome; small sizes are drawn
   in a larger window and cropped, because Chrome on macOS won't paint tiny windows).
 
-After Lars picks, the chosen direction replaces the mark in `../../mark/` and
-`generate.py` there rebuilds the master SVGs, app icon set, favicons and `paths.json`.
