@@ -1,0 +1,70 @@
+# The Next.js server: the website and the license API (/api/v1/*).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "seobasics.fullname" . }}
+  labels:
+    {{- include "seobasics.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+  annotations:
+    {{- include "seobasics.restartAnnotation" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.web.replicas }}
+  selector:
+    matchLabels:
+      {{- include "seobasics.selector" . | nindent 6 }}
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        {{- include "seobasics.selector" . | nindent 8 }}
+        app.kubernetes.io/component: web
+    spec:
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- include "seobasics.podSecurityContext" . | nindent 8 }}
+      {{- include "seobasics.dnsConfig" . | nindent 6 }}
+      {{- include "seobasics.tmpVolume" . | nindent 6 }}
+      containers:
+        - name: web
+          image: {{ include "seobasics.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["node", "server.js"]
+          ports:
+            - name: http
+              containerPort: 3000
+          envFrom:
+            - secretRef:
+                name: {{ include "seobasics.secretName" . }}
+          env:
+            # An entry here wins over the Secret, so nothing the 1Password item carries is listed.
+            - name: APP_URL
+              value: {{ if .Values.host }}{{ printf "https://%s" .Values.host | quote }}{{ else }}"http://localhost:3000"{{ end }}
+            {{- with .Values.purchase.checkoutUrl }}
+            - name: CHECKOUT_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.purchase.appStoreUrl }}
+            - name: APP_STORE_URL
+              value: {{ . | quote }}
+            {{- end }}
+            # Kubernetes sets HOSTNAME to the pod's name. The server must listen on every interface.
+            - name: HOSTNAME
+              value: "0.0.0.0"
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          securityContext:
+            {{- include "seobasics.containerSecurityContext" . | nindent 12 }}
+          {{- include "seobasics.tmpMount" . | nindent 10 }}
+          resources:
+            {{- toYaml .Values.web.resources | nindent 12 }}

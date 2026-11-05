@@ -1,0 +1,66 @@
+// Direct-edition (Stripe) licenses. Mac App Store purchases never appear here:
+// the store edition is entitled by Apple and has no license key (channel
+// separation, docs/license-api-v1.md).
+//
+// dev.seobasics.app and seobasics.app each have their own database; nothing in
+// this schema distinguishes environments.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// A purchased direct-edition license. Owned by lib/license.
+/// Only the SHA-256 of the normalized key is stored; the key itself is shown
+/// to the buyer once and emailed, never persisted.
+model License {
+  id                      String   @id @default(cuid())
+  keyHash                 String   @unique
+  /// Last four key characters, for support ("key ending in 7QK2").
+  keyHint                 String
+  /// active | revoked
+  status                  String   @default("active")
+  /// refunded | disputed | support (set when revoked)
+  revokedReason           String?
+  revokedAt               DateTime?
+  email                   String
+  stripeCheckoutSessionId String?  @unique
+  stripePaymentIntentId   String?  @unique
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  activations LicenseActivation[]
+
+  @@index([email])
+}
+
+/// One Mac on which a license is activated. Owned by lib/license.
+model LicenseActivation {
+  id              String    @id @default(cuid())
+  licenseId       String
+  /// SHA-256 of the app's per-install random device id. The app sends the raw
+  /// id over TLS; the server hashes it on arrival and never stores it.
+  deviceHash      String
+  /// User-visible Mac name, for "deactivate a Mac" lists. Optional.
+  deviceName      String?
+  appVersion      String?
+  activatedAt     DateTime  @default(now())
+  lastValidatedAt DateTime  @default(now())
+  deactivatedAt   DateTime?
+
+  license License @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+
+  @@index([licenseId, deactivatedAt])
+  @@index([deviceHash])
+}
+
+/// Processed Stripe webhook events, for idempotency. Owned by lib/billing.
+model StripeEvent {
+  id          String   @id
+  type        String
+  processedAt DateTime @default(now())
+}

@@ -1,0 +1,57 @@
+{
+  "name": "seobasics.app",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@12.11.2",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "//build:tools": "Bundles dist/migrate.mjs, the image's migrate job (no Prisma CLI in the image).",
+    "build:tools": "node scripts/build-tools.mjs",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "tsx --test tests/unit/*.test.ts",
+    "//test:integration": "Postgres integration tests. Needs TEST_DATABASE_URL: a dedicated, migrated database whose license tables are emptied. Skipped without it.",
+    "test:integration": "tsx --test tests/integration/*.test.ts",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:studio": "prisma studio",
+    "//check:migrations": "Applies every migration to the empty DATABASE_URL database and fails if the result differs from prisma/schema.prisma (a schema change without a migration).",
+    "check:migrations": "prisma migrate deploy && prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code",
+    "check:workflows": "sh scripts/check-workflow-runners.sh",
+    "//check:chart": "Lints and renders chart/ with helm and checks the manifests. Applies nothing.",
+    "check:chart": "node scripts/check-chart.mjs"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "dotenv": "^18.0.9",
+    "lucide-react": "^1.67.0",
+    "next": "16.4.4",
+    "pg": "^8.23.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.4",
+    "@types/node": "^24.19.2",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "esbuild": "0.28.2",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "16.4.4",
+    "prisma": "7.10.1",
+    "tailwindcss": "^4.3.4",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "yaml": "^2.9.1"
+  }
+}

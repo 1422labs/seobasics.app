@@ -1,0 +1,54 @@
+# The migrations before the new pods start: `node dist/migrate.mjs` (lib/migrate.ts) from the
+# same image. An Argo Sync hook at wave -10, after the OnePasswordItem (-20) and before the
+# Deployment (0); not PreSync, which would run before the item exists on a first deploy and
+# wait forever for its Secret. A failed migration stops the sync before the Deployment changes.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "seobasics.fullname" . }}-migrate
+  labels:
+    {{- include "seobasics.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrate
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  backoffLimit: 3
+  # A missing or misnamed 1Password item fails the sync instead of hanging it.
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        {{- include "seobasics.selector" . | nindent 8 }}
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- include "seobasics.podSecurityContext" . | nindent 8 }}
+      {{- include "seobasics.dnsConfig" . | nindent 6 }}
+      {{- include "seobasics.tmpVolume" . | nindent 6 }}
+      containers:
+        - name: migrate
+          image: {{ include "seobasics.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["node", "dist/migrate.mjs"]
+          # Only the database URL: the migrate job never sees the license signing key.
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "seobasics.secretName" . }}
+                  key: DATABASE_URL
+          securityContext:
+            {{- include "seobasics.containerSecurityContext" . | nindent 12 }}
+          {{- include "seobasics.tmpMount" . | nindent 10 }}
+          resources:
+            requests: { cpu: 25m, memory: 96Mi }
+            limits: { memory: 192Mi }

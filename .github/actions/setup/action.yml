@@ -1,0 +1,26 @@
+name: Set up Node and dependencies
+description: >-
+  pnpm (from packageManager), Node 24 from the runner image's tool cache, a
+  frozen install against the node-local pnpm store, and the generated Prisma
+  client. Every job that needs node_modules runs this after its checkout.
+
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+
+    # Node 24 is in the arc-runner image's tool cache. The pnpm store lives on
+    # the node (pnpm_config_store_dir in the workflow env), so the Actions
+    # cache is off.
+    - uses: actions/setup-node@v5
+      with:
+        node-version: 24
+        package-manager-cache: false
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    - name: Generate Prisma client
+      shell: bash
+      run: pnpm db:generate
