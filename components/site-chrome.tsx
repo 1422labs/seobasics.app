@@ -41,7 +41,7 @@ const footerNav = [
 function Logo() {
   return (
     <Link href="/" aria-label="Homepage" className="flex items-center gap-2.5">
-      <StarMark className="size-7 shrink-0 fill-star-500" />
+      <StarMark className="size-8 shrink-0" />
       <span className="text-[1.0625rem] font-semibold tracking-tight">SEO Basics</span>
     </Link>
   );
@@ -98,7 +98,7 @@ export function SiteFooter() {
       <div className={`${container} grid grid-cols-1 gap-x-12 gap-y-10 lg:grid-cols-4`}>
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-2.5">
-            <StarMark small className="size-6 shrink-0 fill-star-500" />
+            <StarMark small className="size-6 shrink-0" />
             <span className="font-semibold tracking-tight">SEO Basics</span>
           </div>
           <p className="max-w-[32ch] text-base/7 text-neutral-600 sm:text-sm/6 dark:text-neutral-400">The simple SEO crawler for Mac, with MCP built in.</p>

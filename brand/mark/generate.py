@@ -35,7 +35,7 @@ def mark_svg(d, fill, title="SEO Basics"):
             f'<path d="{d}" fill="{fill}"/></svg>\n')
 
 
-def squircle(cx, cy, half, n=5.0, steps=360):
+def squircle(cx, cy, half, n=5.0, steps=360, prec=1):
     """Continuous-corner tile (superellipse, exponent 5), as on the macOS grid."""
     pts = []
     for i in range(steps):
@@ -43,12 +43,16 @@ def squircle(cx, cy, half, n=5.0, steps=360):
         c, s = math.cos(t), math.sin(t)
         x = cx + half * math.copysign(abs(c) ** (2 / n), c)
         y = cy + half * math.copysign(abs(s) ** (2 / n), s)
-        pts.append(f"{x:.1f} {y:.1f}")
+        pts.append(f"{x:.{prec}f} {y:.{prec}f}")
     return "M" + " L".join(pts) + " Z"
 
 
-def icon_svg(dark=True, glow=True, mark=None):
-    """1024 macOS icon: 824 tile on the Big Sur grid, gold glow centred on the star."""
+def icon_svg(dark=False, glow=True, mark=None, square=False):
+    """1024 macOS icon: 824 tile on the Big Sur grid, gold glow centred on the star.
+
+    Light is the default (SEO-14, Lars 2026-11-05); dark stays an alternate for
+    surfaces where a white tile would be the brightest thing on screen.
+    `square` fills the whole 824 area (for the opaque Apple touch icon)."""
     d = mark or FULL
     top, bottom = TILE_DARK if dark else TILE_LIGHT
     edge, edge_op = ("#FFFFFF", 0.09) if dark else ("#17181B", 0.07)
@@ -56,6 +60,11 @@ def icon_svg(dark=True, glow=True, mark=None):
     off = 512 - 50 * k
     gx, gy = off + CENTRE[0] * k, off + CENTRE[1] * k
     a1, a2 = (0.42, 0.30) if dark else (0.30, 0.20)
+    tile = (f'<rect x="100" y="100" width="824" height="824" fill="url(#tile)"/>' if square
+            else f'<path d="{squircle(512, 512, 412)}" fill="url(#tile)"/>')
+    edge_path = "" if square else (f'<path d="{squircle(512, 512, 411)}" fill="none" stroke="{edge}" '
+                                   f'stroke-opacity="{edge_op}" stroke-width="2"/>')
+    clip = '<rect x="100" y="100" width="824" height="824"/>' if square else f'<path d="{squircle(512, 512, 412)}"/>'
     halo = (f'<g clip-path="url(#clip)"><rect width="1024" height="1024" fill="url(#halo)"/>'
             f'<rect width="1024" height="1024" fill="url(#core)"/></g>') if glow else ""
     return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
@@ -64,14 +73,24 @@ def icon_svg(dark=True, glow=True, mark=None):
 <radialGradient id="halo" cx="{gx:.1f}" cy="{gy:.1f}" r="420" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="{GOLD_GLOW}" stop-opacity="{a1}"/><stop offset="0.35" stop-color="{GOLD_GLOW}" stop-opacity="{a2 / 2:.3f}"/><stop offset="1" stop-color="{GOLD_GLOW}" stop-opacity="0"/></radialGradient>
 <radialGradient id="core" cx="{gx:.1f}" cy="{gy:.1f}" r="170" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="{GOLD_CORE}" stop-opacity="{a2}"/><stop offset="1" stop-color="{GOLD_CORE}" stop-opacity="0"/></radialGradient>
 <linearGradient id="star" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{GOLD_TOP}"/><stop offset="1" stop-color="{GOLD_BOTTOM}"/></linearGradient>
-<clipPath id="clip"><path d="{squircle(512, 512, 412)}"/></clipPath>
+<clipPath id="clip">{clip}</clipPath>
 </defs>
-<path d="{squircle(512, 512, 412)}" fill="url(#tile)"/>
+{tile}
 {halo}
-<path d="{squircle(512, 512, 411)}" fill="none" stroke="{edge}" stroke-opacity="{edge_op}" stroke-width="2"/>
+{edge_path}
 <g transform="translate({off:.1f} {off:.1f}) scale({k})"><path d="{d}" fill="url(#star)"/></g>
 </svg>
 '''
+
+
+def web_tile():
+    """Flat tile for the site's StarMark, in the 100 x 100 mark box: the same
+    continuous-corner tile and star placement as the app icon, without glow."""
+    k = 100 / 824                            # 1024 icon space (tile 100..924) -> 100 box
+    scale = 5 * k
+    off = (512 - 250 - 100) * k
+    return {"d": squircle(50, 50, 50, steps=120, prec=2), "edge": squircle(50, 50, 49.8, steps=120, prec=2),
+            "markTransform": f"translate({off:.3f} {off:.3f}) scale({scale:.4f})"}
 
 
 def write(path, text):
@@ -101,12 +120,15 @@ def main():
     write(f"{out}/seobasics-mark-small.svg", mark_svg(SMALL, GOLD))
     write(f"{out}/seobasics-mark-small-ink.svg", mark_svg(SMALL, INK))
     write(f"{out}/seobasics-mark-small-white.svg", mark_svg(SMALL, PAPER))
-    write(f"{out}/seobasics-icon.svg", icon_svg(dark=True))
+    # Light is the default icon (SEO-14); the dark tile is kept as an alternate.
     write(f"{out}/seobasics-icon-light.svg", icon_svg(dark=False))
-    write(f"{out}/seobasics-icon-flat.svg", icon_svg(dark=True, glow=False))
+    write(f"{out}/seobasics-icon-light-small.svg", icon_svg(dark=False, mark=SMALL))
+    write(f"{out}/seobasics-icon.svg", icon_svg(dark=True))
     write(f"{out}/seobasics-icon-small.svg", icon_svg(dark=True, mark=SMALL))
+    write(f"{out}/seobasics-icon-flat.svg", icon_svg(dark=True, glow=False))
     with open(f"{out}/paths.json", "w") as fh:
-        json.dump({"viewBox": "0 0 100 100", "full": FULL, "small": SMALL, "geometry": GEOMETRY}, fh, indent=2)
+        json.dump({"viewBox": "0 0 100 100", "full": FULL, "small": SMALL, "tile": web_tile(), "geometry": GEOMETRY},
+                  fh, indent=2)
         fh.write("\n")
 
     # macOS AppIcon.appiconset (Xcode asset catalog)
@@ -118,27 +140,45 @@ def main():
             px = pt * scale
             name = f"icon_{pt}x{pt}{'@2x' if scale == 2 else ''}.png"
             # 16 and 32 px tiles carry the small mark, whose twinkle survives at that size
-            master = "seobasics-icon-small.svg" if px <= 32 else "seobasics-icon.svg"
+            master = "seobasics-icon-light-small.svg" if px <= 32 else "seobasics-icon-light.svg"
             render(f"{out}/{master}", f"{iconset}/{name}", px)
             images.append({"filename": name, "idiom": "mac", "scale": f"{scale}x", "size": f"{pt}x{pt}"})
     with open(f"{iconset}/Contents.json", "w") as fh:
         json.dump({"images": images, "info": {"author": "xcode", "version": 1}}, fh, indent=2)
         fh.write("\n")
 
+    # In-app brand icon (BrandMark in the macOS app): light tile, with the dark
+    # tile as the Dark appearance, where a white tile would glare.
+    brandset = f"{out}/BrandIcon.imageset"
+    os.makedirs(brandset, exist_ok=True)
+    brand_images = []
+    for appearance, master in ((None, "seobasics-icon-light.svg"), ("dark", "seobasics-icon.svg")):
+        for scale, px in ((1, 128), (2, 256)):
+            name = f"brand-icon{'-dark' if appearance else ''}{'@2x' if scale == 2 else ''}.png"
+            render(f"{out}/{master}", f"{brandset}/{name}", px)
+            entry = {"filename": name, "idiom": "mac", "scale": f"{scale}x"}
+            if appearance:
+                entry["appearances"] = [{"appearance": "luminosity", "value": appearance}]
+            brand_images.append(entry)
+    with open(f"{brandset}/Contents.json", "w") as fh:
+        json.dump({"images": brand_images, "info": {"author": "xcode", "version": 1}}, fh, indent=2)
+        fh.write("\n")
+
     # Web icons for the Next.js app (file conventions in app/)
     app_dir, pub = f"{ROOT}/app", f"{ROOT}/public/brand"
     os.makedirs(pub, exist_ok=True)
-    write(f"{app_dir}/icon.svg", mark_svg(SMALL, GOLD))
+    # Browser icon: the light small tile, cropped to the tile (no grid margin).
+    tab_icon = icon_svg(dark=False, mark=SMALL).replace('viewBox="0 0 1024 1024"', 'viewBox="100 100 824 824"')
+    write(f"{app_dir}/icon.svg", tab_icon)
     for name in ("seobasics-mark.svg", "seobasics-mark-ink.svg", "seobasics-mark-white.svg"):
         with open(f"{out}/{name}") as src:
             write(f"{pub}/{name}", src.read())
     with tempfile.TemporaryDirectory() as tmp:
-        # apple-icon: opaque, full-bleed tile (iOS masks it itself)
-        full_bleed = icon_svg(dark=True).replace('viewBox="0 0 1024 1024"', 'viewBox="100 100 824 824"')
+        # apple-icon: opaque, full-bleed light tile (iOS masks it itself)
+        full_bleed = icon_svg(dark=False, square=True).replace('viewBox="0 0 1024 1024"', 'viewBox="100 100 824 824"')
         write(f"{tmp}/apple.svg", full_bleed)
         render(f"{tmp}/apple.svg", f"{app_dir}/apple-icon.png", 180)
-        small_tile = mark_svg(SMALL, GOLD)
-        write(f"{tmp}/small.svg", small_tile)
+        write(f"{tmp}/small.svg", tab_icon)
         pngs = []
         for px in (16, 32, 48):
             render(f"{tmp}/small.svg", f"{tmp}/f{px}.png", px)
@@ -169,6 +209,13 @@ def test_sheet():
                         ("icon_128x128@2x.png", 128, "256"), ("icon_128x128.png", 64, "128"),
                         ("icon_32x32@2x.png", 64, "64 @1x"), ("icon_32x32.png", 32, "32"),
                         ("icon_16x16@2x.png", 32, "32"), ("icon_16x16.png", 16, "16")])
+    docks = [("light Dock", "rgb(246 246 246 / .8)", "#E9E6DF"), ("dark Dock", "rgb(40 40 40 / .8)", "#1C1C1E"),
+             ("tinted wallpaper", "rgb(60 90 140 / .55)", "linear-gradient(135deg,#2B4C7E,#7A4E8C)")]
+    dock_rows = "".join(
+        f'<div class="dock" style="background:{wall}"><div class="bar" style="background:{bar}">'
+        + "".join(f'<img src="AppIcon.appiconset/{n}" width="{w}" height="{w}" alt="">' for n, w in
+                  [("icon_16x16.png", 16), ("icon_32x32.png", 32), ("icon_128x128.png", 64), ("icon_256x256.png", 128)])
+        + f'</div><span class="tag">{label}</span></div>' for label, bar, wall in docks)
     return f'''<!doctype html><html><head><meta charset="utf-8"><title>SEO Basics mark test sheet</title>
 <style>
 @font-face{{font-family:InterVariable;font-style:normal;font-weight:100 900;font-display:swap;src:url("../../public/fonts/InterVariable.woff2") format("woff2")}}
@@ -183,6 +230,9 @@ figcaption{{font-size:11px;color:#8A8C93;font-variant-numeric:tabular-nums}}
 .ramp .tag{{position:absolute;top:12px;right:16px;font-size:11px;color:#8A8C93}}
 .tiles{{display:flex;gap:28px;align-items:center}}
 .tiles img{{display:block}}
+.dock{{position:relative;padding:22px 26px;border-radius:14px;margin-bottom:12px}}
+.dock .bar{{display:inline-flex;align-items:flex-end;gap:18px;padding:10px 14px;border-radius:18px;backdrop-filter:blur(20px)}}
+.dock .tag{{position:absolute;top:12px;right:16px;font-size:11px;color:#8A8C93}}
 .space{{display:flex;gap:40px;align-items:flex-start}}
 .cs{{position:relative;width:300px;height:300px;background:#fff;outline:1px solid rgb(23 24 27 / .08);border-radius:14px}}
 .cs .box{{position:absolute;inset:50px;outline:1px dashed #C9A23A}}
@@ -195,8 +245,15 @@ figcaption{{font-size:11px;color:#8A8C93;font-variant-numeric:tabular-nums}}
 <h1>SEO Basics: star mark</h1>
 <p class="lede">Direction H, "Glint", approved by Lars on 2026-11-05. A full five-point star with filleted tips and inner corners, and one small four-point twinkle in its upper-right crook: the sparkle of the 🌟 reference, kept to a single accent. From 32 px up it is the full mark; at 16 to 24 px the small variant sets a larger twinkle slightly further out so it survives.</p>
 
-<h2>macOS app icon (rendered AppIcon.appiconset PNGs)</h2>
+<h2>macOS app icon, light (rendered AppIcon.appiconset PNGs, the default since SEO-14)</h2>
 <div class="tiles">{icon_cells}</div>
+
+<h2>Dock simulation (not a Mac screenshot): light, dark and tinted backgrounds</h2>
+{dock_rows}
+
+<h2>Dark alternate (in-app brand icon in Dark appearance only)</h2>
+<div class="tiles"><figure><img src="BrandIcon.imageset/brand-icon-dark@2x.png" width="128" height="128" alt=""><figcaption>dark, 128</figcaption></figure>
+<figure><img src="BrandIcon.imageset/brand-icon@2x.png" width="128" height="128" alt=""><figcaption>light, 128</figcaption></figure></div>
 
 <h2>Size ramp: gold, light and dark</h2>
 {ramp(GOLD, "#FFFFFF", "gold on white")}
@@ -222,6 +279,7 @@ figcaption{{font-size:11px;color:#8A8C93;font-variant-numeric:tabular-nums}}
 <li>Minimum size: 16 px on screen, 6 mm in print.</li>
 <li>Colour: gold #F2A900 on light or dark; ink #17181B or white when one colour is required. Star and twinkle always share one colour. Never recolour, outline, rotate, add effects, or move or drop the twinkle.</li>
 <li>The glow and the top-lit fill exist only inside the app icon tile. The mark itself is always flat, one colour.</li>
+<li>Icon tile: light by default (app icon, favicon, Apple touch icon, site and in-app brand icon). The dark tile is used only in dark appearance (site dark mode, macOS Dark appearance), where a white tile would be the brightest element on screen.</li>
 </ul>
 </div>
 </main></body></html>
