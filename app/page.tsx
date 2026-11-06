@@ -414,7 +414,7 @@ export default function Home() {
         <section aria-labelledby="cta-title" className="border-t border-neutral-950/5 py-20 sm:py-28 dark:border-white/10">
           <div className={`${container} flex flex-col items-start gap-8 sm:flex-row sm:items-center sm:justify-between`}>
             <div className="flex items-center gap-5">
-              <StarMark className="size-12 shrink-0 fill-star-500" />
+              <StarMark className="size-14 shrink-0" />
               <h2 id="cta-title" className="max-w-[30ch] text-3xl font-semibold tracking-tight text-balance">
                 Run your first audit in a minute.
               </h2>
